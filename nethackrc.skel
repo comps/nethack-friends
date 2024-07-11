@@ -1,0 +1,67 @@
+#
+# See https://nethackwiki.com/wiki/Options
+#
+
+# You will probably want to set these to speed up new character creation.
+# (Note that you can set only some of them and let the game ask for the rest.)
+#
+#OPTIONS=name:Herja
+#OPTIONS=role:Valkyrie
+#OPTIONS=race:human
+#OPTIONS=gender:female
+#OPTIONS=align:lawful
+#OPTIONS=catname:Frode
+#OPTIONS=dogname:Rolf
+#OPTIONS=fruit:Kiwi
+
+# Uncomment these to enable arrow keys + switch to a multi-window
+# ncurses interface (if you also enable perm_invent).
+#OPTIONS=windowtype:curses
+#OPTIONS=guicolor
+#OPTIONS=perm_invent
+
+# Set to 0 to enable VI keys instead of a numpad.
+# h = left ; j = down ; k = up ; l = right
+# y = left+up ; u = right+up ; b = left+down ; n = right+down
+OPTIONS=number_pad:1
+
+# -----------------------------------------------------------------
+
+OPTIONS=symset:IBMgraphics
+
+OPTIONS=autopickup
+OPTIONS=color
+OPTIONS=hitpointbar
+OPTIONS=hilite_pet
+OPTIONS=standout
+OPTIONS=!mail
+#OPTIONS=!verbose  # disables pet pick up msgs too :(
+OPTIONS=time
+OPTIONS=playmode:normal
+OPTIONS=pushweapon
+
+OPTIONS=pickup_types:$?=!/
+OPTIONS=pickup_burden:unencumbered
+OPTIONS=boulder:0
+OPTIONS=disclose:yi ya yv yg yc yo
+
+OPTIONS=menucolors
+MENUCOLOR="blessed"=green
+MENUCOLOR="cursed"=red
+MENUCOLOR="uncursed"=gray
+
+OPTIONS=statushilites:5
+OPTIONS=hilite_status:gold/up/yellow/down/red
+OPTIONS=hilite_status:characteristics/up/green/down/red
+OPTIONS=hilite_status:armor-class/up/red/down/green
+OPTIONS=hilite_status:alignment/changed/orange
+OPTIONS=hilite_status:hunger/always/yellow
+OPTIONS=hilite_status:carrying-capacity/burdened/yellow/stressed/orange
+OPTIONS=hilite_status:hitpoints/100%/gray/<100%/green/<60%/yellow/<30%/red
+OPTIONS=hilite_status:condition/major_troubles/orange
+OPTIONS=hilite_status:condition/minor_troubles/red
+OPTIONS=hilite_status:condition/movement/bright-blue
+
+# these are somewhat useless
+MSGTYPE=hide "You swap places with .*"
+MSGTYPE=hide "Your tentacles suck the .*"
