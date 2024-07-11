@@ -1,26 +1,23 @@
 #!/bin/bash
 
-# directory with the 'nethack' binary and other supporting files
-#NETHACK_DISTRIB=/usr/games/nethack
-NETHACK_DISTRIB=/usr/local/games/nethack_light_blue
-
-# this is where all data will be stored - needs r/w access by the current user
-BASE_DIR=$HOME
+# this is the default for 'make install'
+NETHACK_PLAYGROUND=$HOME/nh/install/games/lib/nethackdir
 
 # keep away from valid unix UIDs, the game has some weird logic tied to getuid()
 # like querying the user's password - non-existent UIDs will just make that
 # ancient code silently fail without visible side-effects
 FIRST_PLAYER_UID=2000
 
+# this is where all extra will be stored
+BASE_DIR=$HOME
+
 PLAYER_DIRS=$BASE_DIR/players
-NETHACK_PLAYGROUND=$BASE_DIR/playground
 NETHACKRC_SKEL=$BASE_DIR/nethackrc.skel
 
-# directory with helper programs you should have compiled; ideally locate this
-# away from BASE_DIR (as BIN_DIR is read-only), but BASE_DIR works ok as default
+# directory with helper programs you should have compiled
 BIN_DIR=$BASE_DIR/bin
 
-SECURE_EDITOR=(nano --syntax sh --restricted)
+SECURE_EDITOR=(nano --restricted)
 
 
 #
@@ -38,17 +35,6 @@ function error {
 function fatal {
     error "$@"
     exit 1
-}
-
-function find_ld_so {
-    local path
-    # first path found
-    read -r path < <(
-        command -v /usr/bin/ld.so || \
-        command -v /bin/ld.so || \
-        command -v /usr/lib64/ld-linux*.so*
-    ) || return 1
-    echo "$path"
 }
 
 
@@ -101,9 +87,7 @@ function login_player {
     elif [[ ${#name} -gt 30 ]]; then
         fatal "username cannot be >30 characters long"
     elif [[ ! $name =~ ^[a-zA-Z0-9_]+$ ]]; then
-        fatal "username can only contain a-z A-Z 0-9 and underscore"
-    elif [[ $name =~ ^[[:space:]]*$ ]]; then
-        fatal "username cannot consist only of spaces"
+        fatal "username can only contain a-z A-Z 0-9 and underscores"
     fi
 
     if player_exists "$name"; then
@@ -128,33 +112,22 @@ function login_player {
 # PLAYGROUND INIT
 #
 
-function init_playground {
-    local ground=$NETHACK_PLAYGROUND
-    [[ -e $ground ]] && return 0
-    mkdir -p "$ground"
-
-    mkdir "$ground/save"
-    touch "$ground/logfile"
-    touch "$ground/xlogfile"
-
-    # used by nethack for locking when updating files in playground
-    touch "$ground/perm"
-
-    # write our own syscf file
-    {
-        echo WIZARDS=
-        echo EXPLORERS=
-        echo GENERICUSERS=
-        echo MAXPLAYERS=0
-        echo CHECK_SAVE_UID=0
-        echo PANICTRACE_GDB=0
-        echo PANICTRACE_LIBC=0
-    } > "$ground/sysconf"
-
-    # link other files from distrib
-    local d=$NETHACK_DISTRIB
-    ln -s "$d/nethack" "$d/recover" "$d/symbols" "$d/nhdat" "$ground/."
+function write_custom_sysconf {
+    if grep -q '^#' "$NETHACK_PLAYGROUND/sysconf"; then
+        # the most important thing here is MAXPLAYERS=0 which allows
+        # unlimited "fake" unix users to play at the same time
+        {
+            echo WIZARDS=
+            echo EXPLORERS=
+            echo GENERICUSERS=
+            echo MAXPLAYERS=0
+            echo CHECK_SAVE_UID=0
+            echo PANICTRACE_GDB=0
+            echo PANICTRACE_LIBC=0
+        } > "$NETHACK_PLAYGROUND/sysconf"
+    fi
 }
+
 
 #
 # MAIN MENU
@@ -218,12 +191,6 @@ function run_nethack {
     fi
 
     local bin_dir_abs=$(realpath "$BIN_DIR")
-    local nethack_abs=$(realpath "$NETHACK_DISTRIB/nethack")
-
-    local ld_so
-    if ! ld_so=$(find_ld_so); then
-        fatal "could not find ld.so (or ld-linux loader) on your OS"
-    fi
 
     NETHACK_FRIENDS_UID=$uid \
     NETHACKDIR=$NETHACK_PLAYGROUND \
@@ -234,14 +201,12 @@ function run_nethack {
     MAIL=/dev/null \
     MAILREADER=/bin/true \
     LD_PRELOAD=$bin_dir_abs/fake_uid.so \
-    "$BIN_DIR/cp437" "$ld_so" "$nethack_abs"
+        "$BIN_DIR/cp437" "$NETHACK_PLAYGROUND/nethack"
 }
 
 function kill_nethack {
     local name=$1 dir=$2 uid=$3
 
-    # TODO: search only for pids with cwd->/home/nethack/playground,
-    #       don't kill cp437 and ld.so processes
     local playground_abs=$(realpath "$NETHACK_PLAYGROUND")
 
     local env_path pid cwd found=
@@ -311,7 +276,7 @@ function wipe_account {
 
 set -e
 
-init_playground
+write_custom_sysconf
 login_player
 
 # vim: sts=4 sw=4 et :
