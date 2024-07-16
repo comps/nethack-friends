@@ -6,7 +6,7 @@ NETHACK_PLAYGROUND=$HOME/nh/install/games/lib/nethackdir
 # keep away from valid unix UIDs, the game has some weird logic tied to getuid()
 # like querying the user's password - non-existent UIDs will just make that
 # ancient code silently fail without visible side-effects
-FIRST_PLAYER_UID=2000
+FIRST_PLAYER_UID=10000
 
 # this is where all extra will be stored
 BASE_DIR=$HOME
@@ -88,6 +88,10 @@ function login_player {
         fatal "username cannot be >30 characters long"
     elif [[ ! $name =~ ^[a-zA-Z0-9_]+$ ]]; then
         fatal "username can only contain a-z A-Z 0-9 and underscores"
+    elif [[ $name =~ ^[0-9] ]]; then
+        # because we need to match save/backup file names by UID,
+        # ie. 2000MyChar.gz: is it 200 + 0MyChar or 2000 + MyChar ?
+        fatal "the first letter of the username must not be a number"
     fi
 
     if player_exists "$name"; then
@@ -232,7 +236,18 @@ function kill_nethack {
 function recover_save {
     local name=$1 dir=$2 uid=$3
 
-    "$NETHACK_PLAYGROUND/recover" -d "$NETHACK_PLAYGROUND" "$uid$name" || true
+    local found= file files=$(echo "$NETHACK_PLAYGROUND/$uid"[^0-9]*.[0-9]*)
+    for file in "$NETHACK_PLAYGROUND/$uid"[^0-9]*.[0-9]*; do
+        [[ -f $file ]] || continue  # account for glob match failure
+        file=${file%.[0-9]*}
+        file=${file##*/}
+        "$NETHACK_PLAYGROUND/recover" -d "$NETHACK_PLAYGROUND" "$file" || true
+        found=1
+    done
+
+    if [[ -z $found ]]; then
+        echo "No runtime backups found for '$name'."
+    fi
 }
 
 function edit_nethackrc {
@@ -260,8 +275,8 @@ function wipe_account {
         kill_nethack "$name" "$dir" "$uid"
         echo "Wiping '$name'."
         rm -rf "$dir"
-        rm -f "$NETHACK_PLAYGROUND/save/$uid$name.gz"
-        rm -f "$NETHACK_PLAYGROUND/$uid$name."[0-9]*
+        rm -f "$NETHACK_PLAYGROUND/save/$uid"[^0-9]*.gz
+        rm -f "$NETHACK_PLAYGROUND/$uid"[^0-9]*.[0-9]*
         echo "Good bye!"
         exit 0
     else
